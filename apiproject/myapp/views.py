@@ -6,41 +6,41 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
 from myapp.models import Contact
 from myapp.serializers import ContactSerializer
+from rest_framework import status
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from django.http import Http404
+from rest_framework.views import APIView
+from rest_framework import mixins
+from rest_framework import generics
 
-@csrf_exempt
-def api_list(request):
-    if request.method == 'GET':
-        apivar = Contact.objects.all()
-        serializer = ContactSerializer(apivar, many=True)
-        return JsonResponse(serializer.data, safe=False)
 
-    elif request.method == 'POST':
-        data = JSONParser().parse(request)
-        serializer = ContactSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return JsonResponse(serializer.data, status=201)
-        return JsonResponse(serializer.errors, status=400)
+class ContactList(generics.ListCreateAPIView, 
+            mixins.ListModelMixin,
+            mixins.CreateModelMixin,
+            generics.GenericAPIView):
     
-@csrf_exempt
-def api_detail(request, pk):
-    try:
-        detailVar = Contact.objects.get(pk=pk)
-    except Contact.DoesNotExist:
-        return HttpResponse(status=404)
+    queryset = Contact.objects.all()
+    serializer_class = ContactSerializer
 
-    if request.method == 'GET':
-        serializer = ContactSerializer(detailVar)
-        return JsonResponse(serializer.data)
+    def get(self, request):
+        return self.list(request)
 
-    elif request.method == 'PUT':
-        data = JSONParser().parse(request)
-        serializer = ContactSerializer(detailVar, data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return JsonResponse(serializer.data)
-        return JsonResponse(serializer.errors, status=400)
+    def post(self, request):
+        return self.create(request)
 
-    elif request.method == 'DELETE':
-        detailVar.delete()
-        return HttpResponse(status=204)
+class ContactDetail(mixins.RetrieveModelMixin,
+                    mixins.UpdateModelMixin,
+                    mixins.DestroyModelMixin,
+                    generics.GenericAPIView):
+    queryset = Contact.objects.all()
+    serializer_class = ContactSerializer
+
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
